@@ -11,5 +11,8 @@ urlpatterns = [
     path('removeDish', views.removeDish),
     path('order', views.order),
     path('setOrder', views.setOrder),
-
+    path('viewOrder', views.viewOrder),
+    path('viewOrders', views.viewOrders),
+    path('cancelOrder', views.cancelOrder),
+    path('acceptOrder', views.acceptOrder)
 ]

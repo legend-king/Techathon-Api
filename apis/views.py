@@ -10,13 +10,18 @@ mydb = mysql.connector.connect(
   database="techathon"
 )
 
-mycursor = mydb.cursor(dictionary=True)
-
+mycursor = mydb.cursor(dictionary=True, buffered=True)
+# mycursor = mydb.cursor(buffered=True)
 @api_view(['POST'])
 def login(request):
     try:
-        email=request.POST.get('email')
-        password=request.POST.get('password')
+        if request.POST.get('email'):
+            email=request.POST.get('email')
+            password=request.POST.get('password')
+        else:
+            data = json.loads(request.body)
+            email=data['email']
+            password=data['password']
         mycursor.execute("select * from user where email='{}' and password='{}'".format(email, password))
         print(email, password)
         result = mycursor.fetchone()
@@ -34,18 +39,20 @@ def register(request):
     try:
         print(request.body)
         if request.POST.get('name'):
-
             name = request.POST.get('name')
             mobile = request.POST.get('mobile')
             email=request.POST.get('email')
             password=request.POST.get('password')
             userType=request.POST.get('userType')
         else:
-            name = request.body('name')
-            mobile = request.body('mobile')
-            email=request.body('email')
-            password=request.body('password')
-            userType=request.body('userType')
+            data = json.loads(request.body)
+            print(data)
+            name = data['name']
+            mobile = data['mobile']
+            email=data['email']
+            password=data['password']
+            userType=data['userType']
+        
         print(email,password)
         mycursor.execute("select * from user where email='{0}'".format(email))
         result = mycursor.fetchall()
@@ -58,7 +65,8 @@ def register(request):
         if x==1:
             return Response({"message":1})
         return Response({"message":0})
-    except:
+    except Exception as e:
+        print(e)
         return Response({"message":0})
 
 
@@ -151,8 +159,9 @@ def setOrder(request):
     try:
         orderBy = request.POST.get('email')
         orderType = request.POST.get('type')
+        wantedTime = request.POST.get('wantedTime')
 
-        mycursor.execute("insert into setOrder(orderBy, orderType) values('{}', '{}')".format(orderBy, orderType))
+        mycursor.execute("insert into setOrder(orderBy, orderType, wantedTime) values('{}', '{}', '{}')".format(orderBy, orderType, wantedTime))
         x=mycursor.rowcount
 
         mydb.commit()
@@ -164,3 +173,61 @@ def setOrder(request):
         return Response({"message":0})
 
 
+
+@api_view(['POST'])
+def viewOrder(request):
+    try:
+        orderBY = request.POST.get('email')
+        mycursor.execute("select distinct f.id,f.acceptedBy, f.status, u.mobile,f.orderType from foodOrder f, user u where status!='completed' and status!='cancelled'  and orderBy='{}' and userType=1".format(orderBY))
+        # x=mycursor.rowcount
+        data=mycursor.fetchall()
+        # mydb.commit()
+        print(data)
+        return Response(data)
+    except Exception as e:
+        print(e)
+        return Response({"message":0})
+
+@api_view(['GET'])
+def viewOrders(request):
+    try:
+
+        mycursor.execute("select * from foodOrder where status='ordered'")
+        # x=mycursor.rowcount
+        data=mycursor.fetchall()
+        print(data)
+        return Response(data)
+    except Exception as e:
+        print(e)
+        return Response({"message":0})
+
+
+@api_view(['POST'])
+def cancelOrder(request):
+    try:
+        id = request.POST.get("id")
+        mycursor.execute("update foodOrder set status='cancelled' where id={}".format(id))
+        x=mycursor.rowcount
+
+        mydb.commit()
+        if x==1:
+            return Response({"message":1})
+        return Response({"message":0})
+    except:
+        return Response({"message":0})
+
+
+@api_view(['POST'])
+def acceptOrder(request):
+    try:
+        id = request.POST.get("id")
+        email = request.POST.get("email")
+        mycursor.execute("update foodOrder set status='accepted', acceptedBy='{}' where id={}".format(email,id))
+        x=mycursor.rowcount
+
+        mydb.commit()
+        if x==1:
+            return Response({"message":1})
+        return Response({"message":0})
+    except:
+        return Response({"message":0})
